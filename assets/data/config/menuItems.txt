@@ -1,4 +1,6 @@
 story mode
+multiplayer
 freeplay
-options
+profile
+download
 credits

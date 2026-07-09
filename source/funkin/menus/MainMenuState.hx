@@ -8,6 +8,9 @@ import funkin.backend.scripting.events.menu.MenuChangeEvent;
 import funkin.backend.scripting.events.NameEvent;
 import funkin.menus.credits.CreditsMain;
 import funkin.options.OptionsMenu;
+import funkin.menus.MultiplayerState;
+import funkin.menus.DownloadState;
+import funkin.menus.ProfileState;
 import lime.app.Application;
 
 using StringTools;
@@ -186,10 +189,13 @@ class MainMenuState extends MusicBeatState
 			if (event.cancelled) return;
 			switch (event.name)
 			{
-				case 'story mode': FlxG.switchState(new StoryMenuState());
-				case 'freeplay': FlxG.switchState(new FreeplayState());
-				case 'donate', 'credits': FlxG.switchState(new CreditsMain());  // kept donate for not breaking scripts, if you don't want donate to bring you to the credits menu, thats easy softcodable  - Nex
-				case 'options': FlxG.switchState(new OptionsMenu());
+			case 'story mode': FlxG.switchState(new StoryMenuState());
+			case 'multiplayer': FlxG.switchState(new MultiplayerState());
+			case 'freeplay': FlxG.switchState(new FreeplayState());
+			case 'profile': FlxG.switchState(new ProfileState());
+			case 'download': FlxG.switchState(new DownloadState());
+			case 'donate', 'credits': FlxG.switchState(new CreditsMain());
+			case 'options': FlxG.switchState(new OptionsMenu());
 			}
 		});
 	}
