@@ -65,13 +65,14 @@ class MainMenuState extends MusicBeatState
 
 		for (i=>option in optionShit)
 		{
-			var menuItem:FlxSprite = new FlxSprite(0, 60 + (i * 160));
+			var menuItem:FlxSprite = new FlxSprite(30, 30 + (i * 110));
 			menuItem.frames = Paths.getFrames('menus/mainmenu/${option}');
 			menuItem.animation.addByPrefix('idle', option + " basic", 24);
 			menuItem.animation.addByPrefix('selected', option + " white", 24);
 			menuItem.animation.play('idle');
 			menuItem.ID = i;
-			menuItem.screenCenter(X);
+			menuItem.scale.set(0.6, 0.6);
+			menuItem.updateHitbox();
 			menuItems.add(menuItem);
 			menuItem.scrollFactor.set();
 			menuItem.antialiasing = true;
@@ -99,7 +100,7 @@ class MainMenuState extends MusicBeatState
 	}
 
 	var selectedSomethin:Bool = false;
-	var forceCenterX:Bool = true;
+	var forceCenterX:Bool = false;
 	var devModeCount:Int = 0;
 
 	override function update(elapsed:Float)

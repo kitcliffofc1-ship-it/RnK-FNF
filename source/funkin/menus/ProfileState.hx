@@ -1,5 +1,7 @@
 package funkin.menus;
 
+import funkin.backend.FunkinText;
+
 class ProfileState extends MusicBeatState
 {
 	var bg:FlxSprite;
