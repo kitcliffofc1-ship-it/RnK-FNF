@@ -20,6 +20,7 @@ class MainMenuState extends MusicBeatState
 	var curSelected:Int = 0;
 
 	var menuItems:FlxTypedGroup<FlxSprite>;
+	var menuTexts:FlxTypedGroup<FunkinText>;
 
 	var optionShit:Array<String> = CoolUtil.coolTextFile(Paths.txt("config/menuItems"));
 
@@ -34,7 +35,6 @@ class MainMenuState extends MusicBeatState
 
 	override function create()
 	{
-
 		super.create();
 
 		DiscordUtil.call("onMenuLoaded", ["Main Menu"]);
@@ -62,17 +62,37 @@ class MainMenuState extends MusicBeatState
 
 		menuItems = new FlxTypedGroup<FlxSprite>();
 		add(menuItems);
+		menuTexts = new FlxTypedGroup<FunkinText>();
+		add(menuTexts);
 
 		for (i=>option in optionShit)
 		{
-			var menuItem:FlxSprite = new FlxSprite(30, 30 + (i * 110));
-			menuItem.frames = Paths.getFrames('menus/mainmenu/${option}');
-			menuItem.animation.addByPrefix('idle', option + " basic", 24);
-			menuItem.animation.addByPrefix('selected', option + " white", 24);
-			menuItem.animation.play('idle');
+			var yPos:Float = 30 + (i * 110);
+			var menuItem:FlxSprite = new FlxSprite(30, yPos);
+			var hasGFX:Bool = false;
+
+			try
+			{
+				menuItem.frames = Paths.getFrames('menus/mainmenu/${option}');
+				menuItem.animation.addByPrefix('idle', option + " basic", 24);
+				menuItem.animation.addByPrefix('selected', option + " white", 24);
+				menuItem.animation.play('idle');
+				menuItem.scale.set(0.6, 0.6);
+				menuItem.updateHitbox();
+				hasGFX = true;
+			}
+			catch (e:Dynamic) {}
+
+			if (!hasGFX)
+			{
+				menuItem.makeGraphic(280, 50, 0x88000000);
+				var txt = new FunkinText(35, yPos + 10, 270, option.toUpperCase(), 24);
+				txt.ID = i;
+				txt.scrollFactor.set();
+				menuTexts.add(txt);
+			}
+
 			menuItem.ID = i;
-			menuItem.scale.set(0.6, 0.6);
-			menuItem.updateHitbox();
 			menuItems.add(menuItem);
 			menuItem.scrollFactor.set();
 			menuItem.antialiasing = true;
@@ -116,13 +136,6 @@ class MainMenuState extends MusicBeatState
 					persistentDraw = true;
 					openSubState(new funkin.editors.EditorPicker());
 				}
-				/*
-				if (FlxG.keys.justPressed.SEVEN)
-					FlxG.switchState(new funkin.desktop.DesktopMain());
-				if (FlxG.keys.justPressed.EIGHT) {
-					CoolUtil.safeSaveFile("chart.json", Json.stringify(funkin.backend.chart.Chart.parse("dadbattle", "hard")));
-				}
-				*/
 			}
 			if (!Options.devMode && FlxG.keys.justPressed.SEVEN) {
 				FlxG.sound.play(Paths.sound(Flags.DEFAULT_EDITOR_DELETE_SOUND));
@@ -140,7 +153,7 @@ class MainMenuState extends MusicBeatState
 			var downP = controls.DOWN_P;
 			var scroll = FlxG.mouse.wheel;
 
-			if (upP || downP || scroll != 0)  // like this we wont break mods that expect a 0 change event when calling sometimes  - Nex
+			if (upP || downP || scroll != 0)
 				changeItem((upP ? -1 : 0) + (downP ? 1 : 0) - scroll);
 
 			if (controls.BACK)
@@ -171,6 +184,9 @@ class MainMenuState extends MusicBeatState
 		try {
 			menuItems.forEach(function(spr:FlxSprite) {
 				FlxTween.tween(spr, {alpha: 0}, 0.5, {ease: FlxEase.quintOut});
+			});
+			menuTexts.forEach(function(txt:FunkinText) {
+				FlxTween.tween(txt, {alpha: 0}, 0.5, {ease: FlxEase.quintOut});
 			});
 		}
 		return super.switchTo(nextState);
@@ -212,18 +228,39 @@ class MainMenuState extends MusicBeatState
 
 		menuItems.forEach(function(spr:FlxSprite)
 		{
-			spr.animation.play('idle');
+			if (spr.animation.exists('idle'))
+				spr.animation.play('idle');
+			spr.alpha = 0.6;
 
 			if (spr.ID == curSelected)
 			{
-				spr.animation.play('selected');
+				if (spr.animation.exists('selected'))
+					spr.animation.play('selected');
+				spr.alpha = 1.0;
 				var mid = spr.getGraphicMidpoint();
 				camFollow.setPosition(mid.x, mid.y);
 				mid.put();
 			}
 
-			spr.updateHitbox();
-			spr.centerOffsets();
+			if (spr.animation.exists('idle'))
+			{
+				spr.updateHitbox();
+				spr.centerOffsets();
+			}
+		});
+
+		menuTexts.forEach(function(txt:FunkinText)
+		{
+			txt.alpha = 0.6;
+			if (txt.ID == curSelected)
+			{
+				txt.alpha = 1.0;
+				txt.scale.set(1.1, 1.1);
+			}
+			else
+			{
+				txt.scale.set(1.0, 1.0);
+			}
 		});
 	}
 }
