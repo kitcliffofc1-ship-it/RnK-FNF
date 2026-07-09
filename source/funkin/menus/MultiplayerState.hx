@@ -13,12 +13,11 @@ class MultiplayerState extends MusicBeatState
 	static var SERVER_PORT:Int = 3002;
 
 	var bg:FlxSprite;
-	var titleText:FunkinText;
 	var statusText:FunkinText;
 
-	var createRoomBtn:FlxSprite;
-	var joinRoomBtn:FlxSprite;
-	var backBtn:FlxSprite;
+	var createRoomBtn:FunkinText;
+	var joinRoomBtn:FunkinText;
+	var backBtn:FunkinText;
 
 	var inputBox:FlxSprite;
 	var inputText:FunkinText;
@@ -27,6 +26,9 @@ class MultiplayerState extends MusicBeatState
 	var typingCursor:Float = 0;
 
 	var client:MultiplayerClient;
+
+	var panelBG:FlxSprite;
+	var panelChars:Array<FunkinText> = [];
 
 	override function create()
 	{
@@ -39,37 +41,11 @@ class MultiplayerState extends MusicBeatState
 		bg.screenCenter();
 		add(bg);
 
-		titleText = new FunkinText(0, 30, 0, "MULTIPLAYER", 40);
-		titleText.screenCenter(X);
-		add(titleText);
+		buildPanel();
 
-		statusText = new FunkinText(0, 80, 0, "Press SPACE to connect", 20);
+		statusText = new FunkinText(0, 420, 0, "Press SPACE to connect", 14);
 		statusText.screenCenter(X);
 		add(statusText);
-
-		createRoomBtn = createButton(120, "CREATE ROOM", 0xFF4CAF50);
-		add(createRoomBtn);
-
-		joinRoomBtn = createButton(200, "JOIN ROOM", 0xFF2196F3);
-		add(joinRoomBtn);
-
-		backBtn = createButton(FlxG.height - 60, "BACK", 0xFFF44336);
-		add(backBtn);
-
-		inputBox = new FlxSprite(0, 280).makeGraphic(300, 40, 0xFF333333);
-		inputBox.screenCenter(X);
-		inputBox.visible = false;
-		add(inputBox);
-
-		inputText = new FunkinText(0, 288, 300, "", 20);
-		inputText.screenCenter(X);
-		inputText.visible = false;
-		add(inputText);
-
-		var hintText = new FunkinText(0, 325, 0, "Type room code, press ENTER to join", 14);
-		hintText.screenCenter(X);
-		hintText.visible = false;
-		add(hintText);
 
 		client = new MultiplayerClient();
 		client.onRoomCreated = onRoomCreated;
@@ -80,12 +56,89 @@ class MultiplayerState extends MusicBeatState
 		isTyping = false;
 	}
 
-	function createButton(y:Float, label:String, color:Int):FlxSprite
+	function buildPanel()
 	{
-		var btn = new FlxSprite(0, y).makeGraphic(300, 40, color);
-		btn.screenCenter(X);
-		btn.ID = Std.int(y);
-		return btn;
+		var px = Std.int(FlxG.width / 2 - 180);
+		var py = 50;
+		var pw = 360;
+		var ph = 340;
+
+		panelBG = new FlxSprite(px, py).makeGraphic(pw, ph, 0xCC0A0A1A);
+		panelBG.scrollFactor.set();
+		add(panelBG);
+
+		panelChars = [];
+		function addBorder(c, xOff, yOff) {
+			var t = new FunkinText(px + xOff, py + yOff, 0, c, 10);
+			t.scrollFactor.set();
+			panelChars.push(t);
+			add(t);
+		}
+
+		addBorder("╔══════════════════════════════════════╗", 5, 5);
+		addBorder("║                                      ║", 5, 20);
+
+		var title = new FunkinText(0, py + 22, 0, "MULTIPLAYER", 28);
+		title.screenCenter(X);
+		title.scrollFactor.set();
+		add(title);
+
+		addBorder("╠══════════════════════════════════════╣", 5, 55);
+		addBorder("║                                      ║", 5, 70);
+		addBorder("║                                      ║", 5, 100);
+		addBorder("║                                      ║", 5, 130);
+		addBorder("║                                      ║", 5, 160);
+		addBorder("║                                      ║", 5, 190);
+		addBorder("║                                      ║", 5, 220);
+		addBorder("║                                      ║", 5, 250);
+
+		var btnY = [80, 115];
+		var btnLabels = ["[ CREATE ROOM ]", "[  JOIN ROOM  ]"];
+		var btnArr = [null, null];
+		for (i in 0...2)
+		{
+			var t = new FunkinText(0, py + btnY[i], 0, btnLabels[i], 22);
+			t.screenCenter(X);
+			t.scrollFactor.set();
+			t.ID = i;
+			add(t);
+			btnArr[i] = t;
+		}
+		createRoomBtn = btnArr[0];
+		joinRoomBtn = btnArr[1];
+
+		addBorder("║                                      ║", 5, 155);
+		addBorder("║  ┌──────────────────────────┐        ║", 5, 175);
+		addBorder("║  │                          │        ║", 5, 195);
+		addBorder("║  └──────────────────────────┘        ║", 5, 215);
+
+		var roomLabel = new FunkinText(0, py + 155, 0, "Room Code:", 14);
+		roomLabel.screenCenter(X);
+		roomLabel.scrollFactor.set();
+		add(roomLabel);
+
+		inputBox = new FlxSprite(px + 50, py + 198).makeGraphic(260, 24, 0xFF1A1A2E);
+		inputBox.scrollFactor.set();
+		inputBox.visible = false;
+		add(inputBox);
+
+		inputText = new FunkinText(0, py + 200, 0, "", 18);
+		inputText.screenCenter(X);
+		inputText.scrollFactor.set();
+		inputText.visible = false;
+		add(inputText);
+
+		var hintText = new FunkinText(0, py + 235, 0, "Type code, ENTER to join", 12);
+		hintText.screenCenter(X);
+		hintText.scrollFactor.set();
+		hintText.visible = false;
+		add(hintText);
+
+		addBorder("╚══════════════════════════════════════╝", 5, 240);
+
+		backBtn = new FunkinText(px + 5, py + 265, 0, "[ BACK ]", 16);
+		backBtn.scrollFactor.set();
+		add(backBtn);
 	}
 
 	override function update(elapsed:Float)
@@ -167,7 +220,7 @@ class MultiplayerState extends MusicBeatState
 		statusText.text = "Connecting...";
 		if (client.connect(SERVER_HOST, SERVER_PORT))
 		{
-			statusText.text = "Connected! Press SPACE to create or enter a code";
+			statusText.text = "Connected!";
 		}
 		else
 		{
@@ -209,7 +262,7 @@ class MultiplayerState extends MusicBeatState
 			if (Std.isOfType(m, FunkinText))
 			{
 				var ft:FunkinText = cast m;
-				if (ft.text == "Type room code, press ENTER to join")
+				if (ft.text == "Type code, ENTER to join")
 					ft.visible = show;
 			}
 		}

@@ -9,19 +9,18 @@ class MultiplayerLobbyState extends MusicBeatState
 	public var client:MultiplayerClient;
 
 	var bg:FlxSprite;
-	var roomCodeText:FunkinText;
-	var playerSlots:Array<LobbyPlayerSlot> = [];
-	var readyBtn:FlxSprite;
-	var readyLabel:FunkinText;
-	var startBtn:FlxSprite;
-	var startLabel:FunkinText;
-	var leaveBtn:FlxSprite;
 	var statusText:FunkinText;
-	var isReady:Bool = false;
 
+	var playerSlots:Array<{nameTxt:FunkinText, statusTxt:FunkinText}> = [];
+	var readyBtn:FunkinText;
+	var leaveBtn:FunkinText;
+	var startBtn:FunkinText;
+	var botBtn:FunkinText;
+
+	var isReady:Bool = false;
 	var botCount:Int = 0;
-	var botBtn:FlxSprite;
-	var botLabel:FunkinText;
+
+	var panelBG:FlxSprite;
 
 	override function create()
 	{
@@ -34,48 +33,7 @@ class MultiplayerLobbyState extends MusicBeatState
 		bg.screenCenter();
 		add(bg);
 
-		roomCodeText = new FunkinText(0, 20, 0, 'ROOM: ${client.roomId}', 32);
-		roomCodeText.screenCenter(X);
-		add(roomCodeText);
-
-		for (i in 0...3)
-		{
-			var slot = new LobbyPlayerSlot(80 + i * 130);
-			playerSlots.push(slot);
-			add(slot.bg);
-			add(slot.nameText);
-			add(slot.statusText);
-		}
-
-		statusText = new FunkinText(0, 470, 0, "Waiting for players...", 18);
-		statusText.screenCenter(X);
-		add(statusText);
-
-		readyBtn = new FlxSprite(0, 510).makeGraphic(180, 40, 0xFF4CAF50);
-		readyBtn.screenCenter(X);
-		add(readyBtn);
-		readyLabel = new FunkinText(0, 518, 180, "READY", 20);
-		readyLabel.screenCenter(X);
-		readyLabel.alignment = CENTER;
-		add(readyLabel);
-
-		leaveBtn = new FlxSprite(0, 560).makeGraphic(180, 40, 0xFFF44336);
-		leaveBtn.screenCenter(X);
-		add(leaveBtn);
-		var leaveLabel = new FunkinText(0, 568, 180, "LEAVE ROOM", 20);
-		leaveLabel.screenCenter(X);
-		leaveLabel.alignment = CENTER;
-		add(leaveLabel);
-
-		botBtn = new FlxSprite(0, 600).makeGraphic(180, 40, 0xFF9C27B0);
-		botBtn.screenCenter(X);
-		botBtn.visible = client.hostId == client.playerId;
-		add(botBtn);
-		botLabel = new FunkinText(0, 608, 180, "ADD BOT", 20);
-		botLabel.screenCenter(X);
-		botLabel.alignment = CENTER;
-		botLabel.visible = client.hostId == client.playerId;
-		add(botLabel);
+		buildPanel();
 
 		client.onPlayersUpdated = onPlayersUpdated;
 		client.onGameStarting = onGameStarting;
@@ -83,6 +41,84 @@ class MultiplayerLobbyState extends MusicBeatState
 		client.onRoomClosed = onRoomClosed;
 
 		updatePlayers();
+	}
+
+	function buildPanel()
+	{
+		var px = Std.int(FlxG.width / 2 - 200);
+		var py = 30;
+		var pw = 400;
+		var ph = 400;
+
+		panelBG = new FlxSprite(px, py).makeGraphic(pw, ph, 0xCC0A0A1A);
+		panelBG.scrollFactor.set();
+		add(panelBG);
+
+		function addBorder(c, xOff, yOff) {
+			var t = new FunkinText(px + xOff, py + yOff, 0, c, 10);
+			t.scrollFactor.set();
+			add(t);
+		}
+
+		addBorder("╔══════════════════════════════════════╗", 5, 5);
+
+		var roomCodeText = new FunkinText(px + 10, py + 8, 0, 'ROOM: ${client.roomId}', 24);
+		roomCodeText.scrollFactor.set();
+		add(roomCodeText);
+
+		addBorder("╠══════════════════════════════════════╣", 5, 35);
+
+		var slotY = [55, 115, 175];
+		for (i in 0...3)
+		{
+			addBorder("║                                      ║", 5, slotY[i] - 5);
+			var nameTxt = new FunkinText(px + 15, py + slotY[i], 0, "Empty Slot", 16);
+			nameTxt.scrollFactor.set();
+			add(nameTxt);
+
+			var statusTxt = new FunkinText(px + 15, py + slotY[i] + 28, 0, "", 13);
+			statusTxt.scrollFactor.set();
+			add(statusTxt);
+
+			playerSlots.push({nameTxt: nameTxt, statusTxt: statusTxt});
+		}
+
+		addBorder("╠══════════════════════════════════════╣", 5, 215);
+
+		addBorder("║                                      ║", 5, 225);
+		addBorder("║                                      ║", 5, 255);
+
+		var songLabel = new FunkinText(px + 15, py + 228, 0, "Song: Concerned", 15);
+		songLabel.scrollFactor.set();
+		add(songLabel);
+
+		var modeLabel = new FunkinText(px + 15, py + 258, 0, "Mode: 3 Player Battle", 15);
+		modeLabel.scrollFactor.set();
+		add(modeLabel);
+
+		addBorder("╚══════════════════════════════════════╝", 5, 290);
+
+		readyBtn = new FunkinText(px + 10, py + 310, 0, "[  READY  ]", 18);
+		readyBtn.scrollFactor.set();
+		add(readyBtn);
+
+		botBtn = new FunkinText(px + 10, py + 340, 0, "[ ADD BOT ]", 18);
+		botBtn.scrollFactor.set();
+		botBtn.visible = client.hostId == client.playerId;
+		add(botBtn);
+
+		startBtn = new FunkinText(px + 10, py + 340, 0, "[ START GAME ]", 20);
+		startBtn.scrollFactor.set();
+		startBtn.visible = false;
+		add(startBtn);
+
+		leaveBtn = new FunkinText(px + 10, py + 370, 0, "[ LEAVE ]", 16);
+		leaveBtn.scrollFactor.set();
+		add(leaveBtn);
+
+		statusText = new FunkinText(px + 10, py + 395, pw - 20, "Waiting for players...", 12);
+		statusText.scrollFactor.set();
+		add(statusText);
 	}
 
 	override function update(elapsed:Float)
@@ -102,7 +138,7 @@ class MultiplayerLobbyState extends MusicBeatState
 				leaveRoom();
 			else if (botBtn.visible && botBtn.overlapsPoint(mp))
 				addBot();
-			else if (startBtn != null && startLabel.visible && startBtn.overlapsPoint(mp))
+			else if (startBtn.visible && startBtn.overlapsPoint(mp))
 				forceStart();
 		}
 
@@ -114,7 +150,7 @@ class MultiplayerLobbyState extends MusicBeatState
 	{
 		if (botCount >= 2 || client.players.length + botCount >= 3) return;
 		botCount++;
-		botLabel.text = 'ADD BOT ($botCount/2)';
+		botBtn.text = '[ ADD BOT ($botCount/2) ]';
 		updatePlayers();
 	}
 
@@ -130,7 +166,7 @@ class MultiplayerLobbyState extends MusicBeatState
 	{
 		MultiplayerPlayState.mpClient = client;
 		MultiplayerPlayState.botCount = botCount;
-		PlayState.__loadSong("tutorial", "normal", null);
+		PlayState.__loadSong("cornered", "hard", null);
 		FlxG.switchState(new MultiplayerPlayState());
 	}
 
@@ -138,7 +174,7 @@ class MultiplayerLobbyState extends MusicBeatState
 	{
 		isReady = !isReady;
 		client.send("player_ready", {ready: isReady});
-		readyLabel.text = isReady ? "UNREADY" : "READY";
+		readyBtn.text = isReady ? "[ UNREADY ]" : "[  READY  ]";
 		updatePlayers();
 	}
 
@@ -157,23 +193,20 @@ class MultiplayerLobbyState extends MusicBeatState
 
 		for (i in 0...3)
 		{
+			var slot = playerSlots[i];
 			if (i < players.length)
 			{
 				var p = players[i];
-				playerSlots[i].bg.visible = true;
-				playerSlots[i].nameText.text = p.name;
-				playerSlots[i].nameText.visible = true;
-				playerSlots[i].nameText.alpha = 1;
-				playerSlots[i].statusText.text = p.ready ? "READY" : "WAITING...";
-				playerSlots[i].statusText.visible = true;
-				playerSlots[i].bg.color = p.isHost ? 0xFFFFD700 : (p.id.startsWith("bot_") ? 0xFF9C27B0 : 0xFF333333);
+				slot.nameTxt.text = p.name;
+				slot.nameTxt.alpha = 1;
+				slot.statusTxt.text = p.ready ? "> READY ✓" : "> WAIT...";
+				slot.statusTxt.visible = true;
 			}
 			else
 			{
-				playerSlots[i].bg.visible = true;
-				playerSlots[i].nameText.text = "Empty Slot";
-				playerSlots[i].nameText.alpha = 0.4;
-				playerSlots[i].statusText.text = "";
+				slot.nameTxt.text = "Empty Slot";
+				slot.nameTxt.alpha = 0.4;
+				slot.statusTxt.text = "";
 			}
 		}
 
@@ -183,21 +216,14 @@ class MultiplayerLobbyState extends MusicBeatState
 
 		if (allReady && client.hostId == client.playerId)
 		{
-			if (startBtn == null)
-			{
-				startBtn = new FlxSprite(0, 420).makeGraphic(180, 40, 0xFFFF9800);
-				startBtn.screenCenter(X);
-				add(startBtn);
-				startLabel = new FunkinText(0, 428, 180, "START GAME", 20);
-				startLabel.screenCenter(X);
-				startLabel.alignment = CENTER;
-				add(startLabel);
-			}
-			startBtn.visible = startLabel.visible = true;
+			startBtn.visible = true;
+			botBtn.visible = false;
 		}
-		else if (startBtn != null)
+		else
 		{
-			startBtn.visible = startLabel.visible = false;
+			startBtn.visible = false;
+			if (client.hostId == client.playerId)
+				botBtn.visible = true;
 		}
 	}
 
@@ -222,26 +248,5 @@ class MultiplayerLobbyState extends MusicBeatState
 		statusText.text = "Room closed";
 		client.disconnect();
 		FlxG.switchState(new MultiplayerState());
-	}
-}
-
-class LobbyPlayerSlot
-{
-	public var bg:FlxSprite;
-	public var nameText:FunkinText;
-	public var statusText:FunkinText;
-
-	public function new(y:Float)
-	{
-		bg = new FlxSprite(0, y).makeGraphic(200, 100, 0xFF333333);
-		bg.screenCenter(X);
-
-		nameText = new FunkinText(0, y + 20, 200, "", 18);
-		nameText.screenCenter(X);
-		nameText.alignment = CENTER;
-
-		statusText = new FunkinText(0, y + 55, 200, "", 16);
-		statusText.screenCenter(X);
-		statusText.alignment = CENTER;
 	}
 }
