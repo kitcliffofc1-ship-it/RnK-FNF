@@ -10,13 +10,12 @@ class MultiplayerLobbyState extends MusicBeatState
 
 	var bg:FlxSprite;
 	var statusText:FunkinText;
-
 	var playerSlots:Array<{nameTxt:FunkinText, statusTxt:FunkinText}> = [];
 
 	var isReady:Bool = false;
 	var botCount:Int = 0;
 
-	var navBtns:Array<{txt:FunkinText, hit:FlxSprite, action:Void->Void}> = [];
+	var btnTexts:Array<FunkinText> = [];
 	var selectedIndex:Int = 0;
 
 	override function create()
@@ -25,38 +24,11 @@ class MultiplayerLobbyState extends MusicBeatState
 
 		DiscordUtil.call("onMenuLoaded", ["Multiplayer Lobby"]);
 
-		FlxG.mouse.visible = true;
-
 		bg = new FlxSprite().loadAnimatedGraphic(Paths.image('menus/menuBGBlue'));
 		bg.scrollFactor.set();
 		bg.screenCenter();
 		add(bg);
 
-		buildPanel();
-
-		client.onPlayersUpdated = onPlayersUpdated;
-		client.onGameStarting = onGameStarting;
-		client.onGameStart = onGameStart;
-		client.onRoomClosed = onRoomClosed;
-
-		updatePlayers();
-	}
-
-	function makeTextBtn(txt:String, x:Float, y:Float, size:Int, action:Void->Void)
-	{
-		var t = new FunkinText(x, y, 0, txt, size);
-		t.scrollFactor.set();
-		add(t);
-
-		var h = new FlxSprite(t.x - 4, t.y - 4).makeGraphic(Std.int(t.width + 8), Std.int(t.height + 8), 0x00FFFFFF);
-		h.scrollFactor.set();
-		add(h);
-
-		navBtns.push({txt: t, hit: h, action: action});
-	}
-
-	function buildPanel()
-	{
 		var px = Std.int(FlxG.width / 2 - 200);
 		var py = 30;
 
@@ -94,43 +66,37 @@ class MultiplayerLobbyState extends MusicBeatState
 		modeTxt.scrollFactor.set();
 		add(modeTxt);
 
-		makeTextBtn("[  READY  ]", px + 10, py + 300, 18, toggleReady);
+		function addBtn(txt:String, x:Float, y:Float, size:Int) {
+			var t = new FunkinText(x, y, 0, txt, size);
+			t.scrollFactor.set();
+			add(t);
+			btnTexts.push(t);
+			return t;
+		}
 
-		makeTextBtn("[ ADD BOT ]", px + 10, py + 330, 18, function() {
-			if (botCount >= 2 || client.players.length + botCount >= 3) return;
-			botCount++;
-			navBtns[2].txt.text = '[ ADD BOT ($botCount/2) ]';
-			updatePlayers();
-		});
-
-		makeTextBtn("[ START GAME ]", px + 10, py + 330, 20, function() {
-			var totalPlayers = client.players.length + botCount;
-			if (totalPlayers < 2) return;
-			statusText.text = "Starting with bots...";
-			startGameNow();
-		});
-
-		makeTextBtn("[ LEAVE ]", px + 10, py + 370, 16, function() {
-			client.send("leave_room");
-			client.disconnect();
-			FlxG.switchState(new MultiplayerState());
-		});
+		// indices: 0=ready, 1=bot, 2=start, 3=leave
+		addBtn("[  READY  ]", px + 10, py + 300, 18);
+		addBtn("[ ADD BOT ]", px + 10, py + 330, 18);
+		addBtn("[ START GAME ]", px + 10, py + 330, 20);
+		addBtn("[ LEAVE ]", px + 10, py + 370, 16);
 
 		statusText = new FunkinText(px + 10, py + 395, 380, "Waiting for players...", 12);
 		statusText.scrollFactor.set();
 		add(statusText);
 
-		showStartBtn(false);
+		client.onPlayersUpdated = onPlayersUpdated;
+		client.onGameStarting = onGameStarting;
+		client.onGameStart = onGameStart;
+		client.onRoomClosed = onRoomClosed;
+
+		updatePlayers();
 	}
 
 	function showStartBtn(show:Bool)
 	{
-		// start btn index 3, bot btn index 2
-		if (navBtns.length >= 4)
-		{
-			navBtns[3].txt.visible = navBtns[3].hit.visible = show;
-			navBtns[2].txt.visible = navBtns[2].hit.visible = !show;
-		}
+		if (btnTexts.length < 4) return;
+		btnTexts[1].visible = !show; // bot
+		btnTexts[2].visible = show;  // start
 	}
 
 	override function update(elapsed:Float)
@@ -140,14 +106,8 @@ class MultiplayerLobbyState extends MusicBeatState
 		if (client != null)
 			client.update(elapsed);
 
-		for (i in 0...navBtns.length)
-			navBtns[i].txt.alpha = (navBtns[i].hit.visible && i == selectedIndex) ? 1.0 : (navBtns[i].hit.visible ? 0.5 : 0.2);
-
-		if (FlxG.mouse.justPressed)
-		{
-			for (b in navBtns)
-				if (b.hit.visible && FlxG.mouse.overlaps(b.hit)) { b.action(); break; }
-		}
+		for (i in 0...btnTexts.length)
+			btnTexts[i].alpha = (btnTexts[i].visible && i == selectedIndex) ? 1.0 : (btnTexts[i].visible ? 0.5 : 0.2);
 
 		if (controls.BACK)
 		{
@@ -156,19 +116,43 @@ class MultiplayerLobbyState extends MusicBeatState
 			FlxG.switchState(new MultiplayerState());
 		}
 
-		if (FlxG.keys.justPressed.UP && selectedIndex > 0)
+		if (FlxG.keys.justPressed.UP)
 		{
 			selectedIndex--;
-			while (selectedIndex > 0 && !navBtns[selectedIndex].hit.visible) selectedIndex--;
+			while (selectedIndex > 0 && !btnTexts[selectedIndex].visible) selectedIndex--;
 		}
-		else if (FlxG.keys.justPressed.DOWN && selectedIndex < navBtns.length - 1)
+		else if (FlxG.keys.justPressed.DOWN)
 		{
 			selectedIndex++;
-			while (selectedIndex < navBtns.length - 1 && !navBtns[selectedIndex].hit.visible) selectedIndex++;
+			while (selectedIndex < btnTexts.length - 1 && !btnTexts[selectedIndex].visible) selectedIndex++;
 		}
 
 		if (FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE)
-			if (navBtns[selectedIndex].hit.visible) navBtns[selectedIndex].action();
+		{
+			if (!btnTexts[selectedIndex].visible) return;
+			switch (selectedIndex)
+			{
+				case 0:
+					isReady = !isReady;
+					client.send("player_ready", {ready: isReady});
+					btnTexts[0].text = isReady ? "[ UNREADY ]" : "[  READY  ]";
+					updatePlayers();
+				case 1:
+					if (botCount >= 2 || client.players.length + botCount >= 3) return;
+					botCount++;
+					btnTexts[1].text = '[ ADD BOT ($botCount/2) ]';
+					updatePlayers();
+				case 2:
+					var totalPlayers = client.players.length + botCount;
+					if (totalPlayers < 2) return;
+					statusText.text = "Starting with bots...";
+					startGameNow();
+				case 3:
+					client.send("leave_room");
+					client.disconnect();
+					FlxG.switchState(new MultiplayerState());
+			}
+		}
 	}
 
 	function startGameNow()
@@ -177,14 +161,6 @@ class MultiplayerLobbyState extends MusicBeatState
 		MultiplayerPlayState.botCount = botCount;
 		PlayState.__loadSong("cornered", "hard", null);
 		FlxG.switchState(new MultiplayerPlayState());
-	}
-
-	function toggleReady()
-	{
-		isReady = !isReady;
-		client.send("player_ready", {ready: isReady});
-		navBtns[0].txt.text = isReady ? "[ UNREADY ]" : "[  READY  ]";
-		updatePlayers();
 	}
 
 	function updatePlayers()
@@ -220,22 +196,7 @@ class MultiplayerLobbyState extends MusicBeatState
 	}
 
 	function onPlayersUpdated() { updatePlayers(); }
-
-	function onGameStarting(countdown:Int)
-	{
-		statusText.text = 'Game starting in $countdown...';
-	}
-
-	function onGameStart(startTime:Float)
-	{
-		statusText.text = "GO!";
-		startGameNow();
-	}
-
-	function onRoomClosed()
-	{
-		statusText.text = "Room closed";
-		client.disconnect();
-		FlxG.switchState(new MultiplayerState());
-	}
+	function onGameStarting(countdown:Int) { statusText.text = 'Game starting in $countdown...'; }
+	function onGameStart(startTime:Float) { statusText.text = "GO!"; startGameNow(); }
+	function onRoomClosed() { statusText.text = "Room closed"; client.disconnect(); FlxG.switchState(new MultiplayerState()); }
 }

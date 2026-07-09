@@ -15,7 +15,7 @@ class MultiplayerState extends MusicBeatState
 	var bg:FlxSprite;
 	var statusText:FunkinText;
 
-	var navBtns:Array<{txt:FunkinText, hit:FlxSprite, action:Void->Void}> = [];
+	var btnTexts:Array<FunkinText> = [];
 	var selectedIndex:Int = 0;
 
 	var inputBox:FlxSprite;
@@ -32,43 +32,11 @@ class MultiplayerState extends MusicBeatState
 
 		DiscordUtil.call("onMenuLoaded", ["Multiplayer"]);
 
-		FlxG.mouse.visible = true;
-
 		bg = new FlxSprite().loadAnimatedGraphic(Paths.image('menus/menuBGBlue'));
 		bg.scrollFactor.set();
 		bg.screenCenter();
 		add(bg);
 
-		buildPanel();
-
-		statusText = new FunkinText(0, 420, 0, "Press SPACE to connect", 14);
-		statusText.screenCenter(X);
-		add(statusText);
-
-		client = new MultiplayerClient();
-		client.onRoomCreated = onRoomCreated;
-		client.onRoomJoined = onRoomJoined;
-		client.onError = onServerError;
-		client.onRoomClosed = onRoomClosed;
-
-		isTyping = false;
-	}
-
-	function makeTextBtn(txt:String, x:Float, y:Float, size:Int, action:Void->Void)
-	{
-		var t = new FunkinText(x, y, 0, txt, size);
-		t.scrollFactor.set();
-		add(t);
-
-		var h = new FlxSprite(t.x - 4, t.y - 4).makeGraphic(Std.int(t.width + 8), Std.int(t.height + 8), 0x00FFFFFF);
-		h.scrollFactor.set();
-		add(h);
-
-		navBtns.push({txt: t, hit: h, action: action});
-	}
-
-	function buildPanel()
-	{
 		var px = Std.int(FlxG.width / 2 - 180);
 		var py = 50;
 
@@ -81,15 +49,16 @@ class MultiplayerState extends MusicBeatState
 		title.scrollFactor.set();
 		add(title);
 
-		makeTextBtn("[ CREATE ROOM ]", px + 60, py + 60, 22, function() {
-			if (!client.connected) { connectToServer(); return; }
-			createRoom();
-		});
+		function addBtn(txt:String, x:Float, y:Float, size:Int) {
+			var t = new FunkinText(x, y, 0, txt, size);
+			t.scrollFactor.set();
+			add(t);
+			btnTexts.push(t);
+			return t;
+		}
 
-		makeTextBtn("[  JOIN ROOM  ]", px + 65, py + 100, 22, function() {
-			if (!client.connected) { connectToServer(); return; }
-			startTypingCode();
-		});
+		addBtn("[ CREATE ROOM ]", px + 60, py + 60, 22);
+		addBtn("[  JOIN ROOM  ]", px + 65, py + 100, 22);
 
 		var roomLabel = new FunkinText(0, py + 150, 0, "Room Code:", 14);
 		roomLabel.screenCenter(X);
@@ -113,10 +82,20 @@ class MultiplayerState extends MusicBeatState
 		hintText.visible = false;
 		add(hintText);
 
-		makeTextBtn("[ BACK ]", px + 20, py + 260, 16, function() {
-			if (client != null) client.disconnect();
-			FlxG.switchState(new MainMenuState());
-		});
+		addBtn("[ BACK ]", px + 20, py + 260, 16);
+
+		statusText = new FunkinText(0, py + 300, 0, "Press SPACE to connect", 14);
+		statusText.screenCenter(X);
+		statusText.scrollFactor.set();
+		add(statusText);
+
+		client = new MultiplayerClient();
+		client.onRoomCreated = onRoomCreated;
+		client.onRoomJoined = onRoomJoined;
+		client.onError = onServerError;
+		client.onRoomClosed = onRoomClosed;
+
+		isTyping = false;
 	}
 
 	override function update(elapsed:Float)
@@ -173,22 +152,26 @@ class MultiplayerState extends MusicBeatState
 			return;
 		}
 
-		for (i in 0...navBtns.length)
-			navBtns[i].txt.alpha = (i == selectedIndex) ? 1.0 : 0.5;
+		for (i in 0...btnTexts.length)
+			btnTexts[i].alpha = (i == selectedIndex) ? 1.0 : 0.5;
 
-		if (FlxG.mouse.justPressed)
-		{
-			for (b in navBtns)
-				if (FlxG.mouse.overlaps(b.hit)) { b.action(); break; }
-		}
-
-		if (FlxG.keys.justPressed.UP && selectedIndex > 0)
-			selectedIndex--;
-		else if (FlxG.keys.justPressed.DOWN && selectedIndex < navBtns.length - 1)
-			selectedIndex++;
+		if (FlxG.keys.justPressed.UP && selectedIndex > 0) selectedIndex--;
+		else if (FlxG.keys.justPressed.DOWN && selectedIndex < btnTexts.length - 1) selectedIndex++;
 
 		if (FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE)
-			navBtns[selectedIndex].action();
+		{
+			if (selectedIndex == 2)
+			{
+				if (client != null) client.disconnect();
+				FlxG.switchState(new MainMenuState());
+			}
+			else
+			{
+				if (!client.connected) { connectToServer(); return; }
+				if (selectedIndex == 0) createRoom();
+				else if (selectedIndex == 1) startTypingCode();
+			}
+		}
 	}
 
 	function connectToServer()
