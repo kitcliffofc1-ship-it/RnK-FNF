@@ -19,6 +19,10 @@ class MultiplayerLobbyState extends MusicBeatState
 	var statusText:FunkinText;
 	var isReady:Bool = false;
 
+	var botCount:Int = 0;
+	var botBtn:FlxSprite;
+	var botLabel:FunkinText;
+
 	override function create()
 	{
 		super.create();
@@ -63,6 +67,16 @@ class MultiplayerLobbyState extends MusicBeatState
 		leaveLabel.alignment = CENTER;
 		add(leaveLabel);
 
+		botBtn = new FlxSprite(0, 600).makeGraphic(180, 40, 0xFF9C27B0);
+		botBtn.screenCenter(X);
+		botBtn.visible = client.hostId == client.playerId;
+		add(botBtn);
+		botLabel = new FunkinText(0, 608, 180, "ADD BOT", 20);
+		botLabel.screenCenter(X);
+		botLabel.alignment = CENTER;
+		botLabel.visible = client.hostId == client.playerId;
+		add(botLabel);
+
 		client.onPlayersUpdated = onPlayersUpdated;
 		client.onGameStarting = onGameStarting;
 		client.onGameStart = onGameStart;
@@ -86,12 +100,38 @@ class MultiplayerLobbyState extends MusicBeatState
 				toggleReady();
 			else if (leaveBtn.overlapsPoint(mp))
 				leaveRoom();
+			else if (botBtn.visible && botBtn.overlapsPoint(mp))
+				addBot();
 			else if (startBtn != null && startLabel.visible && startBtn.overlapsPoint(mp))
-				toggleReady();
+				forceStart();
 		}
 
 		if (controls.BACK)
 			leaveRoom();
+	}
+
+	function addBot()
+	{
+		if (botCount >= 2 || client.players.length + botCount >= 3) return;
+		botCount++;
+		botLabel.text = 'ADD BOT ($botCount/2)';
+		updatePlayers();
+	}
+
+	function forceStart()
+	{
+		var totalPlayers = client.players.length + botCount;
+		if (totalPlayers < 2) return;
+		statusText.text = "Starting with bots...";
+		startGameNow();
+	}
+
+	function startGameNow()
+	{
+		MultiplayerPlayState.mpClient = client;
+		MultiplayerPlayState.botCount = botCount;
+		PlayState.__loadSong("tutorial", "normal", null);
+		FlxG.switchState(new MultiplayerPlayState());
 	}
 
 	function toggleReady()
@@ -111,7 +151,10 @@ class MultiplayerLobbyState extends MusicBeatState
 
 	function updatePlayers()
 	{
-		var players = client.players;
+		var players = client.players.copy();
+		for (j in 0...botCount)
+			players.push({id: 'bot_$j', name: 'Bot ${j+1}', ready: true, isHost: false});
+
 		for (i in 0...3)
 		{
 			if (i < players.length)
@@ -120,9 +163,10 @@ class MultiplayerLobbyState extends MusicBeatState
 				playerSlots[i].bg.visible = true;
 				playerSlots[i].nameText.text = p.name;
 				playerSlots[i].nameText.visible = true;
+				playerSlots[i].nameText.alpha = 1;
 				playerSlots[i].statusText.text = p.ready ? "READY" : "WAITING...";
 				playerSlots[i].statusText.visible = true;
-				playerSlots[i].bg.color = p.isHost ? 0xFFFFD700 : 0xFF333333;
+				playerSlots[i].bg.color = p.isHost ? 0xFFFFD700 : (p.id.startsWith("bot_") ? 0xFF9C27B0 : 0xFF333333);
 			}
 			else
 			{
@@ -170,9 +214,7 @@ class MultiplayerLobbyState extends MusicBeatState
 	function onGameStart(startTime:Float)
 	{
 		statusText.text = "GO!";
-		MultiplayerPlayState.mpClient = client;
-		PlayState.__loadSong("tutorial", "normal", null);
-		FlxG.switchState(new MultiplayerPlayState());
+		startGameNow();
 	}
 
 	function onRoomClosed()

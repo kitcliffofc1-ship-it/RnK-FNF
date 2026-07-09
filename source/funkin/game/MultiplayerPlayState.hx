@@ -10,6 +10,7 @@ import funkin.menus.MultiplayerClient.MultiplayerPlayer;
 class MultiplayerPlayState extends PlayState
 {
 	public static var mpClient:MultiplayerClient;
+	public static var botCount:Int = 0;
 
 	var remoteScoreTexts:Array<FunkinText> = [];
 	var remoteHealthBars:Array<FlxSprite> = [];
@@ -18,6 +19,11 @@ class MultiplayerPlayState extends PlayState
 	var lastSentScore:Int = -1;
 	var lastSentCombo:Int = -1;
 	var syncTimer:Float = 0;
+
+	var botSimTimers:Array<Float> = [];
+	var botHealths:Array<Float> = [];
+	var botScores:Array<Int> = [];
+	var botCombos:Array<Int> = [];
 
 	override function create()
 	{
@@ -31,45 +37,57 @@ class MultiplayerPlayState extends PlayState
 		mpClient.onGameOver = onRemoteGameOver;
 
 		var remoteIdx = 0;
+
 		for (p in mpClient.players)
 		{
 			if (p.id == mpClient.playerId) continue;
+			createRemoteHUD(p.name, remoteIdx++);
+		}
 
-			var isRight = (remoteIdx % 2 == 0);
-			var side = isRight ? FlxG.width - 220 : 20;
-			var yOff = 80 + Std.int(remoteIdx / 2) * 100;
-
-			var bg = new FlxSprite(side, yOff).makeGraphic(200, 80, 0x88000000);
-			bg.scrollFactor.set();
-			bg.cameras = [camHUD];
-			add(bg);
-
-			var nameTxt = new FunkinText(side + 5, yOff + 5, 190, p.name, 14);
-			nameTxt.scrollFactor.set();
-			nameTxt.cameras = [camHUD];
-			add(nameTxt);
-
-			var scoreTxt = new FunkinText(side + 5, yOff + 22, 190, "Score: 0", 13);
-			scoreTxt.scrollFactor.set();
-			scoreTxt.cameras = [camHUD];
-			add(scoreTxt);
-			remoteScoreTexts.push(scoreTxt);
-
-			var healthBar = new FlxSprite(side + 5, yOff + 45).makeGraphic(190, 12, 0xFF66FF33);
-			healthBar.scrollFactor.set();
-			healthBar.cameras = [camHUD];
-			add(healthBar);
-			remoteHealthBars.push(healthBar);
-
-			var healthBg = new FlxSprite(side + 5, yOff + 45).makeGraphic(190, 12, 0xFF555555);
-			healthBg.scrollFactor.set();
-			healthBg.cameras = [camHUD];
-			add(healthBg);
-
-			remoteIdx++;
+		for (i in 0...botCount)
+		{
+			createRemoteHUD('Bot ${i+1}', remoteIdx++);
+			botSimTimers.push(0);
+			botHealths.push(1.0);
+			botScores.push(0);
+			botCombos.push(0);
 		}
 
 		attachNetworkHooks();
+	}
+
+	function createRemoteHUD(name:String, idx:Int)
+	{
+		var isRight = (idx % 2 == 0);
+		var side = isRight ? FlxG.width - 220 : 20;
+		var yOff = 80 + Std.int(idx / 2) * 100;
+
+		var bg = new FlxSprite(side, yOff).makeGraphic(200, 80, 0x88000000);
+		bg.scrollFactor.set();
+		bg.cameras = [camHUD];
+		add(bg);
+
+		var nameTxt = new FunkinText(side + 5, yOff + 5, 190, name, 14);
+		nameTxt.scrollFactor.set();
+		nameTxt.cameras = [camHUD];
+		add(nameTxt);
+
+		var scoreTxt = new FunkinText(side + 5, yOff + 22, 190, "Score: 0", 13);
+		scoreTxt.scrollFactor.set();
+		scoreTxt.cameras = [camHUD];
+		add(scoreTxt);
+		remoteScoreTexts.push(scoreTxt);
+
+		var healthBar = new FlxSprite(side + 5, yOff + 45).makeGraphic(190, 12, 0xFF66FF33);
+		healthBar.scrollFactor.set();
+		healthBar.cameras = [camHUD];
+		add(healthBar);
+		remoteHealthBars.push(healthBar);
+
+		var healthBg = new FlxSprite(side + 5, yOff + 45).makeGraphic(190, 12, 0xFF555555);
+		healthBg.scrollFactor.set();
+		healthBg.cameras = [camHUD];
+		add(healthBg);
 	}
 
 	function attachNetworkHooks()
@@ -91,16 +109,48 @@ class MultiplayerPlayState extends PlayState
 	{
 		super.update(elapsed);
 
-		if (mpClient == null || !mpClient.connected) return;
-
-		mpClient.update(elapsed);
-
-		syncTimer += elapsed;
-		if (syncTimer >= 0.5)
+		if (mpClient == null) return;
+		if (mpClient.connected)
 		{
-			syncTimer = 0;
-			sendHealth();
-			sendScore();
+			mpClient.update(elapsed);
+			syncTimer += elapsed;
+			if (syncTimer >= 0.5)
+			{
+				syncTimer = 0;
+				sendHealth();
+				sendScore();
+			}
+		}
+
+		updateBots(elapsed);
+	}
+
+	function updateBots(elapsed:Float)
+	{
+		for (i in 0...botCount)
+		{
+			botSimTimers[i] += elapsed;
+			if (botSimTimers[i] >= 0.3)
+			{
+				botSimTimers[i] = 0;
+				if (Math.random() < 0.85)
+				{
+					botCombos[i]++;
+					botScores[i] += 350;
+				}
+				else
+				{
+					botCombos[i] = 0;
+				}
+				botHealths[i] += (Math.random() - 0.4) * 0.02;
+
+				var idx = (mpClient != null ? mpClient.players.length - 1 : 0) + i;
+				if (idx < remoteScoreTexts.length)
+				{
+					remoteScoreTexts[idx].text = 'Score: ${botScores[i]}  Combo: ${botCombos[i]}';
+					remoteHealthBars[idx].scale.x = Math.max(0, botHealths[i] / 2);
+				}
+			}
 		}
 	}
 
