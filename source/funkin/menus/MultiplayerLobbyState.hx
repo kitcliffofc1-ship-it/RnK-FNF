@@ -143,15 +143,13 @@ class MultiplayerLobbyState extends MusicBeatState
 
 		if (FlxG.mouse.justPressed)
 		{
-			var mp = FlxG.mouse.getScreenPosition();
-
-			if (readyBtn.overlapsPoint(mp))
+			if (FlxG.mouse.overlaps(readyBtn))
 				toggleReady();
-			else if (leaveBtn.overlapsPoint(mp))
+			else if (FlxG.mouse.overlaps(leaveBtn))
 				leaveRoom();
-			else if (botBtn.visible && botBtn.overlapsPoint(mp))
+			else if (botBtn.visible && FlxG.mouse.overlaps(botBtn))
 				addBot();
-			else if (startBtn.visible && startBtn.overlapsPoint(mp))
+			else if (startBtn.visible && FlxG.mouse.overlaps(startBtn))
 				forceStart();
 		}
 

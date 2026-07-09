@@ -204,13 +204,11 @@ class MultiplayerState extends MusicBeatState
 
 		if (FlxG.mouse.justPressed)
 		{
-			var mp = FlxG.mouse.getScreenPosition();
-
-			if (createRoomBtn.overlapsPoint(mp))
+			if (FlxG.mouse.overlaps(createRoomBtn))
 				createRoom();
-			else if (joinRoomBtn.overlapsPoint(mp))
+			else if (FlxG.mouse.overlaps(joinRoomBtn))
 				startTypingCode();
-			else if (backBtn.overlapsPoint(mp))
+			else if (FlxG.mouse.overlaps(backBtn))
 			{
 				if (client != null) client.disconnect();
 				FlxG.switchState(new MainMenuState());
