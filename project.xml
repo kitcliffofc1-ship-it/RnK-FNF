@@ -5,7 +5,7 @@
 		title="RnK" main="funkin.backend.system.Main"
 		file="RnK" packageName="com.rnkit.rnk"
 		package="com.rnkit.rnk"
-		version="1.0.0" company="RnKit" />
+		version="1.0.1" company="RnKit" />
 
 	<!--
 		CHANGE THE SAVE PATH & NAME FOR YOUR MOD HERE!
