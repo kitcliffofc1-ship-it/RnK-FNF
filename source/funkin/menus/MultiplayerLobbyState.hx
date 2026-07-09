@@ -1,6 +1,8 @@
 package funkin.menus;
 
 import funkin.backend.FunkinText;
+import funkin.game.MultiplayerPlayState;
+import funkin.game.PlayState;
 
 class MultiplayerLobbyState extends MusicBeatState
 {
@@ -168,6 +170,9 @@ class MultiplayerLobbyState extends MusicBeatState
 	function onGameStart(startTime:Float)
 	{
 		statusText.text = "GO!";
+		MultiplayerPlayState.mpClient = client;
+		PlayState.__loadSong("tutorial", "normal", null);
+		FlxG.switchState(new MultiplayerPlayState());
 	}
 
 	function onRoomClosed()
