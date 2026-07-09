@@ -26,6 +26,8 @@ class MultiplayerState extends MusicBeatState
 	var typingCursor:Float = 0;
 
 	var client:MultiplayerClient;
+	var selectedIndex:Int = 0;
+	var navItems:Array<FunkinText> = [];
 
 	var panelBG:FlxSprite;
 	var panelChars:Array<FunkinText> = [];
@@ -35,6 +37,8 @@ class MultiplayerState extends MusicBeatState
 		super.create();
 
 		DiscordUtil.call("onMenuLoaded", ["Multiplayer"]);
+
+		FlxG.mouse.visible = true;
 
 		bg = new FlxSprite().loadAnimatedGraphic(Paths.image('menus/menuBGBlue'));
 		bg.scrollFactor.set();
@@ -106,6 +110,7 @@ class MultiplayerState extends MusicBeatState
 		}
 		createRoomBtn = btnArr[0];
 		joinRoomBtn = btnArr[1];
+		navItems = [createRoomBtn, joinRoomBtn, backBtn];
 
 		addBorder("║                                      ║", 5, 155);
 		addBorder("║  ┌──────────────────────────┐        ║", 5, 175);
@@ -195,6 +200,8 @@ class MultiplayerState extends MusicBeatState
 			return;
 		}
 
+		updateNavSelection();
+
 		if (FlxG.mouse.justPressed)
 		{
 			var mp = FlxG.mouse.getScreenPosition();
@@ -210,8 +217,38 @@ class MultiplayerState extends MusicBeatState
 			}
 		}
 
-		if (FlxG.keys.justPressed.SPACE && !client.connected)
-			connectToServer();
+		if (!isTyping)
+		{
+			if (FlxG.keys.justPressed.UP && selectedIndex > 0)
+				selectedIndex--;
+			else if (FlxG.keys.justPressed.DOWN && selectedIndex < navItems.length - 1)
+				selectedIndex++;
+
+			if (FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE)
+			{
+				if (selectedIndex == 2)
+				{
+					if (client != null) client.disconnect();
+					FlxG.switchState(new MainMenuState());
+				}
+				else
+				{
+					if (!client.connected)
+					{
+						connectToServer();
+						return;
+					}
+					if (selectedIndex == 0) createRoom();
+					else if (selectedIndex == 1) startTypingCode();
+				}
+			}
+		}
+	}
+
+	function updateNavSelection()
+	{
+		for (i in 0...navItems.length)
+			navItems[i].alpha = (i == selectedIndex) ? 1.0 : 0.5;
 	}
 
 	function connectToServer()

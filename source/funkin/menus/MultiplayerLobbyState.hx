@@ -19,6 +19,8 @@ class MultiplayerLobbyState extends MusicBeatState
 
 	var isReady:Bool = false;
 	var botCount:Int = 0;
+	var selectedIndex:Int = 0;
+	var lobbyNavItems:Array<{txt:FunkinText, action:Void->Void}> = [];
 
 	var panelBG:FlxSprite;
 
@@ -27,6 +29,8 @@ class MultiplayerLobbyState extends MusicBeatState
 		super.create();
 
 		DiscordUtil.call("onMenuLoaded", ["Multiplayer Lobby"]);
+
+		FlxG.mouse.visible = true;
 
 		bg = new FlxSprite().loadAnimatedGraphic(Paths.image('menus/menuBGBlue'));
 		bg.scrollFactor.set();
@@ -119,6 +123,13 @@ class MultiplayerLobbyState extends MusicBeatState
 		statusText = new FunkinText(px + 10, py + 395, pw - 20, "Waiting for players...", 12);
 		statusText.scrollFactor.set();
 		add(statusText);
+
+		lobbyNavItems = [
+			{txt: readyBtn, action: toggleReady},
+			{txt: botBtn, action: addBot},
+			{txt: startBtn, action: forceStart},
+			{txt: leaveBtn, action: leaveRoom}
+		];
 	}
 
 	override function update(elapsed:Float)
@@ -127,6 +138,8 @@ class MultiplayerLobbyState extends MusicBeatState
 
 		if (client != null)
 			client.update(elapsed);
+
+		updateLobbyNav();
 
 		if (FlxG.mouse.justPressed)
 		{
@@ -144,6 +157,27 @@ class MultiplayerLobbyState extends MusicBeatState
 
 		if (controls.BACK)
 			leaveRoom();
+
+		if (FlxG.keys.justPressed.UP && selectedIndex > 0)
+			selectedIndex--;
+		else if (FlxG.keys.justPressed.DOWN && selectedIndex < lobbyNavItems.length - 1)
+			selectedIndex++;
+
+		if (FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE)
+		{
+			var item = lobbyNavItems[selectedIndex];
+			if (item.txt.visible)
+				item.action();
+		}
+	}
+
+	function updateLobbyNav()
+	{
+		for (i in 0...lobbyNavItems.length)
+		{
+			var item = lobbyNavItems[i];
+			item.txt.alpha = (item.txt.visible && i == selectedIndex) ? 1.0 : (item.txt.visible ? 0.5 : 0.2);
+		}
 	}
 
 	function addBot()
