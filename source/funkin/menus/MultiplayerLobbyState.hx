@@ -1,6 +1,7 @@
 package funkin.menus;
 
 import funkin.backend.FunkinText;
+import flixel.util.FlxTimer;
 import funkin.game.MultiplayerPlayState;
 import funkin.game.PlayState;
 
@@ -17,12 +18,15 @@ class MultiplayerLobbyState extends MusicBeatState
 
 	var btnTexts:Array<FunkinText> = [];
 	var selectedIndex:Int = 0;
+	var inputReady:Bool = false;
 
 	override function create()
 	{
 		super.create();
 
 		DiscordUtil.call("onMenuLoaded", ["Multiplayer Lobby"]);
+
+		new FlxTimer().start(0.05, function(_) inputReady = true);
 
 		bg = new FlxSprite().loadAnimatedGraphic(Paths.image('menus/menuBGBlue'));
 		bg.scrollFactor.set();
@@ -105,6 +109,8 @@ class MultiplayerLobbyState extends MusicBeatState
 
 		if (client != null)
 			client.update(elapsed);
+
+		if (!inputReady) return;
 
 		for (i in 0...btnTexts.length)
 			btnTexts[i].alpha = (btnTexts[i].visible && i == selectedIndex) ? 1.0 : (btnTexts[i].visible ? 0.5 : 0.2);

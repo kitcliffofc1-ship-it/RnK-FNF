@@ -112,11 +112,14 @@ class MultiplayerClient
 		var type:String = msg.type;
 		switch (type)
 		{
+			case "connected":
+				playerId = msg.clientId;
 			case "room_created":
 				playerId = msg.playerId;
 				roomId = msg.roomId;
 				roomName = msg.roomName;
 				hostId = playerId;
+				players = parsePlayers(msg.players);
 				onRoomCreated();
 			case "room_joined":
 				playerId = msg.playerId;

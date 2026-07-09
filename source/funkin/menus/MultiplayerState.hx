@@ -2,6 +2,7 @@ package funkin.menus;
 
 import haxe.Json;
 import funkin.backend.FunkinText;
+import flixel.util.FlxTimer;
 
 #if sys
 import sys.net.Host;
@@ -26,11 +27,15 @@ class MultiplayerState extends MusicBeatState
 
 	var client:MultiplayerClient;
 
+	var inputReady:Bool = false;
+
 	override function create()
 	{
 		super.create();
 
 		DiscordUtil.call("onMenuLoaded", ["Multiplayer"]);
+
+		new FlxTimer().start(0.05, function(_) inputReady = true);
 
 		bg = new FlxSprite().loadAnimatedGraphic(Paths.image('menus/menuBGBlue'));
 		bg.scrollFactor.set();
@@ -104,6 +109,8 @@ class MultiplayerState extends MusicBeatState
 
 		if (client != null && client.connected)
 			client.update(elapsed);
+
+		if (!inputReady) return;
 
 		if (controls.BACK)
 		{
