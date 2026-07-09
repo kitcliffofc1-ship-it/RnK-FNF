@@ -15,9 +15,8 @@ class MultiplayerState extends MusicBeatState
 	var bg:FlxSprite;
 	var statusText:FunkinText;
 
-	var createRoomBtn:FunkinText;
-	var joinRoomBtn:FunkinText;
-	var backBtn:FunkinText;
+	var navBtns:Array<{txt:FunkinText, hit:FlxSprite, action:Void->Void}> = [];
+	var selectedIndex:Int = 0;
 
 	var inputBox:FlxSprite;
 	var inputText:FunkinText;
@@ -26,11 +25,6 @@ class MultiplayerState extends MusicBeatState
 	var typingCursor:Float = 0;
 
 	var client:MultiplayerClient;
-	var selectedIndex:Int = 0;
-	var navItems:Array<FunkinText> = [];
-
-	var panelBG:FlxSprite;
-	var panelChars:Array<FunkinText> = [];
 
 	override function create()
 	{
@@ -60,90 +54,69 @@ class MultiplayerState extends MusicBeatState
 		isTyping = false;
 	}
 
+	function makeTextBtn(txt:String, x:Float, y:Float, size:Int, action:Void->Void)
+	{
+		var t = new FunkinText(x, y, 0, txt, size);
+		t.scrollFactor.set();
+		add(t);
+
+		var h = new FlxSprite(t.x - 4, t.y - 4).makeGraphic(Std.int(t.width + 8), Std.int(t.height + 8), 0x00FFFFFF);
+		h.scrollFactor.set();
+		add(h);
+
+		navBtns.push({txt: t, hit: h, action: action});
+	}
+
 	function buildPanel()
 	{
 		var px = Std.int(FlxG.width / 2 - 180);
 		var py = 50;
-		var pw = 360;
-		var ph = 340;
 
-		panelBG = new FlxSprite(px, py).makeGraphic(pw, ph, 0xCC0A0A1A);
+		var panelBG = new FlxSprite(px, py).makeGraphic(360, 310, 0xCC0A0A1A);
 		panelBG.scrollFactor.set();
 		add(panelBG);
 
-		panelChars = [];
-		function addBorder(c, xOff, yOff) {
-			var t = new FunkinText(px + xOff, py + yOff, 0, c, 10);
-			t.scrollFactor.set();
-			panelChars.push(t);
-			add(t);
-		}
-
-		addBorder("╔══════════════════════════════════════╗", 5, 5);
-		addBorder("║                                      ║", 5, 20);
-
-		var title = new FunkinText(0, py + 22, 0, "MULTIPLAYER", 28);
+		var title = new FunkinText(0, py + 12, 0, "MULTIPLAYER", 28);
 		title.screenCenter(X);
 		title.scrollFactor.set();
 		add(title);
 
-		addBorder("╠══════════════════════════════════════╣", 5, 55);
-		addBorder("║                                      ║", 5, 70);
-		addBorder("║                                      ║", 5, 100);
-		addBorder("║                                      ║", 5, 130);
-		addBorder("║                                      ║", 5, 160);
-		addBorder("║                                      ║", 5, 190);
-		addBorder("║                                      ║", 5, 220);
-		addBorder("║                                      ║", 5, 250);
+		makeTextBtn("[ CREATE ROOM ]", px + 60, py + 60, 22, function() {
+			if (!client.connected) { connectToServer(); return; }
+			createRoom();
+		});
 
-		var btnY = [80, 115];
-		var btnLabels = ["[ CREATE ROOM ]", "[  JOIN ROOM  ]"];
-		var btnArr = [null, null];
-		for (i in 0...2)
-		{
-			var t = new FunkinText(0, py + btnY[i], 0, btnLabels[i], 22);
-			t.screenCenter(X);
-			t.scrollFactor.set();
-			t.ID = i;
-			add(t);
-			btnArr[i] = t;
-		}
-		createRoomBtn = btnArr[0];
-		joinRoomBtn = btnArr[1];
-		navItems = [createRoomBtn, joinRoomBtn, backBtn];
+		makeTextBtn("[  JOIN ROOM  ]", px + 65, py + 100, 22, function() {
+			if (!client.connected) { connectToServer(); return; }
+			startTypingCode();
+		});
 
-		addBorder("║                                      ║", 5, 155);
-		addBorder("║  ┌──────────────────────────┐        ║", 5, 175);
-		addBorder("║  │                          │        ║", 5, 195);
-		addBorder("║  └──────────────────────────┘        ║", 5, 215);
-
-		var roomLabel = new FunkinText(0, py + 155, 0, "Room Code:", 14);
+		var roomLabel = new FunkinText(0, py + 150, 0, "Room Code:", 14);
 		roomLabel.screenCenter(X);
 		roomLabel.scrollFactor.set();
 		add(roomLabel);
 
-		inputBox = new FlxSprite(px + 50, py + 198).makeGraphic(260, 24, 0xFF1A1A2E);
+		inputBox = new FlxSprite(px + 50, py + 175).makeGraphic(260, 24, 0xFF1A1A2E);
 		inputBox.scrollFactor.set();
 		inputBox.visible = false;
 		add(inputBox);
 
-		inputText = new FunkinText(0, py + 200, 0, "", 18);
+		inputText = new FunkinText(0, py + 177, 0, "", 18);
 		inputText.screenCenter(X);
 		inputText.scrollFactor.set();
 		inputText.visible = false;
 		add(inputText);
 
-		var hintText = new FunkinText(0, py + 235, 0, "Type code, ENTER to join", 12);
+		var hintText = new FunkinText(0, py + 210, 0, "Type code, ENTER to join", 12);
 		hintText.screenCenter(X);
 		hintText.scrollFactor.set();
 		hintText.visible = false;
 		add(hintText);
 
-		addBorder("╚══════════════════════════════════════╝", 5, 240);
-
-		backBtn = new FunkinText(px + 5, py + 265, 0, "[ BACK ]", 16);
-		backBtn.scrollFactor.set();
-		add(backBtn);
+		makeTextBtn("[ BACK ]", px + 20, py + 260, 16, function() {
+			if (client != null) client.disconnect();
+			FlxG.switchState(new MainMenuState());
+		});
 	}
 
 	override function update(elapsed:Float)
@@ -200,53 +173,22 @@ class MultiplayerState extends MusicBeatState
 			return;
 		}
 
-		updateNavSelection();
+		for (i in 0...navBtns.length)
+			navBtns[i].txt.alpha = (i == selectedIndex) ? 1.0 : 0.5;
 
 		if (FlxG.mouse.justPressed)
 		{
-			if (FlxG.mouse.overlaps(createRoomBtn))
-				createRoom();
-			else if (FlxG.mouse.overlaps(joinRoomBtn))
-				startTypingCode();
-			else if (FlxG.mouse.overlaps(backBtn))
-			{
-				if (client != null) client.disconnect();
-				FlxG.switchState(new MainMenuState());
-			}
+			for (b in navBtns)
+				if (FlxG.mouse.overlaps(b.hit)) { b.action(); break; }
 		}
 
-		if (!isTyping)
-		{
-			if (FlxG.keys.justPressed.UP && selectedIndex > 0)
-				selectedIndex--;
-			else if (FlxG.keys.justPressed.DOWN && selectedIndex < navItems.length - 1)
-				selectedIndex++;
+		if (FlxG.keys.justPressed.UP && selectedIndex > 0)
+			selectedIndex--;
+		else if (FlxG.keys.justPressed.DOWN && selectedIndex < navBtns.length - 1)
+			selectedIndex++;
 
-			if (FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE)
-			{
-				if (selectedIndex == 2)
-				{
-					if (client != null) client.disconnect();
-					FlxG.switchState(new MainMenuState());
-				}
-				else
-				{
-					if (!client.connected)
-					{
-						connectToServer();
-						return;
-					}
-					if (selectedIndex == 0) createRoom();
-					else if (selectedIndex == 1) startTypingCode();
-				}
-			}
-		}
-	}
-
-	function updateNavSelection()
-	{
-		for (i in 0...navItems.length)
-			navItems[i].alpha = (i == selectedIndex) ? 1.0 : 0.5;
+		if (FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE)
+			navBtns[selectedIndex].action();
 	}
 
 	function connectToServer()
@@ -254,13 +196,9 @@ class MultiplayerState extends MusicBeatState
 		#if sys
 		statusText.text = "Connecting...";
 		if (client.connect(SERVER_HOST, SERVER_PORT))
-		{
 			statusText.text = "Connected!";
-		}
 		else
-		{
 			statusText.text = "Failed to connect! Check if server is running";
-		}
 		#end
 	}
 

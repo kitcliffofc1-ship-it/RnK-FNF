@@ -12,17 +12,12 @@ class MultiplayerLobbyState extends MusicBeatState
 	var statusText:FunkinText;
 
 	var playerSlots:Array<{nameTxt:FunkinText, statusTxt:FunkinText}> = [];
-	var readyBtn:FunkinText;
-	var leaveBtn:FunkinText;
-	var startBtn:FunkinText;
-	var botBtn:FunkinText;
 
 	var isReady:Bool = false;
 	var botCount:Int = 0;
-	var selectedIndex:Int = 0;
-	var lobbyNavItems:Array<{txt:FunkinText, action:Void->Void}> = [];
 
-	var panelBG:FlxSprite;
+	var navBtns:Array<{txt:FunkinText, hit:FlxSprite, action:Void->Void}> = [];
+	var selectedIndex:Int = 0;
 
 	override function create()
 	{
@@ -47,35 +42,35 @@ class MultiplayerLobbyState extends MusicBeatState
 		updatePlayers();
 	}
 
+	function makeTextBtn(txt:String, x:Float, y:Float, size:Int, action:Void->Void)
+	{
+		var t = new FunkinText(x, y, 0, txt, size);
+		t.scrollFactor.set();
+		add(t);
+
+		var h = new FlxSprite(t.x - 4, t.y - 4).makeGraphic(Std.int(t.width + 8), Std.int(t.height + 8), 0x00FFFFFF);
+		h.scrollFactor.set();
+		add(h);
+
+		navBtns.push({txt: t, hit: h, action: action});
+	}
+
 	function buildPanel()
 	{
 		var px = Std.int(FlxG.width / 2 - 200);
 		var py = 30;
-		var pw = 400;
-		var ph = 400;
 
-		panelBG = new FlxSprite(px, py).makeGraphic(pw, ph, 0xCC0A0A1A);
+		var panelBG = new FlxSprite(px, py).makeGraphic(400, 420, 0xCC0A0A1A);
 		panelBG.scrollFactor.set();
 		add(panelBG);
 
-		function addBorder(c, xOff, yOff) {
-			var t = new FunkinText(px + xOff, py + yOff, 0, c, 10);
-			t.scrollFactor.set();
-			add(t);
-		}
-
-		addBorder("╔══════════════════════════════════════╗", 5, 5);
-
-		var roomCodeText = new FunkinText(px + 10, py + 8, 0, 'ROOM: ${client.roomId}', 24);
-		roomCodeText.scrollFactor.set();
-		add(roomCodeText);
-
-		addBorder("╠══════════════════════════════════════╣", 5, 35);
+		var roomText = new FunkinText(px + 10, py + 8, 0, 'ROOM: ${client.roomId}', 24);
+		roomText.scrollFactor.set();
+		add(roomText);
 
 		var slotY = [55, 115, 175];
 		for (i in 0...3)
 		{
-			addBorder("║                                      ║", 5, slotY[i] - 5);
 			var nameTxt = new FunkinText(px + 15, py + slotY[i], 0, "Empty Slot", 16);
 			nameTxt.scrollFactor.set();
 			add(nameTxt);
@@ -87,49 +82,55 @@ class MultiplayerLobbyState extends MusicBeatState
 			playerSlots.push({nameTxt: nameTxt, statusTxt: statusTxt});
 		}
 
-		addBorder("╠══════════════════════════════════════╣", 5, 215);
+		var sep = new FunkinText(px + 10, py + 215, 0, "────────────────────────────────────", 8);
+		sep.scrollFactor.set();
+		add(sep);
 
-		addBorder("║                                      ║", 5, 225);
-		addBorder("║                                      ║", 5, 255);
+		var songTxt = new FunkinText(px + 15, py + 228, 0, "Song: Concerned", 15);
+		songTxt.scrollFactor.set();
+		add(songTxt);
 
-		var songLabel = new FunkinText(px + 15, py + 228, 0, "Song: Concerned", 15);
-		songLabel.scrollFactor.set();
-		add(songLabel);
+		var modeTxt = new FunkinText(px + 15, py + 258, 0, "Mode: 3 Player Battle", 15);
+		modeTxt.scrollFactor.set();
+		add(modeTxt);
 
-		var modeLabel = new FunkinText(px + 15, py + 258, 0, "Mode: 3 Player Battle", 15);
-		modeLabel.scrollFactor.set();
-		add(modeLabel);
+		makeTextBtn("[  READY  ]", px + 10, py + 300, 18, toggleReady);
 
-		addBorder("╚══════════════════════════════════════╝", 5, 290);
+		makeTextBtn("[ ADD BOT ]", px + 10, py + 330, 18, function() {
+			if (botCount >= 2 || client.players.length + botCount >= 3) return;
+			botCount++;
+			navBtns[2].txt.text = '[ ADD BOT ($botCount/2) ]';
+			updatePlayers();
+		});
 
-		readyBtn = new FunkinText(px + 10, py + 310, 0, "[  READY  ]", 18);
-		readyBtn.scrollFactor.set();
-		add(readyBtn);
+		makeTextBtn("[ START GAME ]", px + 10, py + 330, 20, function() {
+			var totalPlayers = client.players.length + botCount;
+			if (totalPlayers < 2) return;
+			statusText.text = "Starting with bots...";
+			startGameNow();
+		});
 
-		botBtn = new FunkinText(px + 10, py + 340, 0, "[ ADD BOT ]", 18);
-		botBtn.scrollFactor.set();
-		botBtn.visible = client.hostId == client.playerId;
-		add(botBtn);
+		makeTextBtn("[ LEAVE ]", px + 10, py + 370, 16, function() {
+			client.send("leave_room");
+			client.disconnect();
+			FlxG.switchState(new MultiplayerState());
+		});
 
-		startBtn = new FunkinText(px + 10, py + 340, 0, "[ START GAME ]", 20);
-		startBtn.scrollFactor.set();
-		startBtn.visible = false;
-		add(startBtn);
-
-		leaveBtn = new FunkinText(px + 10, py + 370, 0, "[ LEAVE ]", 16);
-		leaveBtn.scrollFactor.set();
-		add(leaveBtn);
-
-		statusText = new FunkinText(px + 10, py + 395, pw - 20, "Waiting for players...", 12);
+		statusText = new FunkinText(px + 10, py + 395, 380, "Waiting for players...", 12);
 		statusText.scrollFactor.set();
 		add(statusText);
 
-		lobbyNavItems = [
-			{txt: readyBtn, action: toggleReady},
-			{txt: botBtn, action: addBot},
-			{txt: startBtn, action: forceStart},
-			{txt: leaveBtn, action: leaveRoom}
-		];
+		showStartBtn(false);
+	}
+
+	function showStartBtn(show:Bool)
+	{
+		// start btn index 3, bot btn index 2
+		if (navBtns.length >= 4)
+		{
+			navBtns[3].txt.visible = navBtns[3].hit.visible = show;
+			navBtns[2].txt.visible = navBtns[2].hit.visible = !show;
+		}
 	}
 
 	override function update(elapsed:Float)
@@ -139,59 +140,35 @@ class MultiplayerLobbyState extends MusicBeatState
 		if (client != null)
 			client.update(elapsed);
 
-		updateLobbyNav();
+		for (i in 0...navBtns.length)
+			navBtns[i].txt.alpha = (navBtns[i].hit.visible && i == selectedIndex) ? 1.0 : (navBtns[i].hit.visible ? 0.5 : 0.2);
 
 		if (FlxG.mouse.justPressed)
 		{
-			if (FlxG.mouse.overlaps(readyBtn))
-				toggleReady();
-			else if (FlxG.mouse.overlaps(leaveBtn))
-				leaveRoom();
-			else if (botBtn.visible && FlxG.mouse.overlaps(botBtn))
-				addBot();
-			else if (startBtn.visible && FlxG.mouse.overlaps(startBtn))
-				forceStart();
+			for (b in navBtns)
+				if (b.hit.visible && FlxG.mouse.overlaps(b.hit)) { b.action(); break; }
 		}
 
 		if (controls.BACK)
-			leaveRoom();
+		{
+			client.send("leave_room");
+			client.disconnect();
+			FlxG.switchState(new MultiplayerState());
+		}
 
 		if (FlxG.keys.justPressed.UP && selectedIndex > 0)
+		{
 			selectedIndex--;
-		else if (FlxG.keys.justPressed.DOWN && selectedIndex < lobbyNavItems.length - 1)
+			while (selectedIndex > 0 && !navBtns[selectedIndex].hit.visible) selectedIndex--;
+		}
+		else if (FlxG.keys.justPressed.DOWN && selectedIndex < navBtns.length - 1)
+		{
 			selectedIndex++;
+			while (selectedIndex < navBtns.length - 1 && !navBtns[selectedIndex].hit.visible) selectedIndex++;
+		}
 
 		if (FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE)
-		{
-			var item = lobbyNavItems[selectedIndex];
-			if (item.txt.visible)
-				item.action();
-		}
-	}
-
-	function updateLobbyNav()
-	{
-		for (i in 0...lobbyNavItems.length)
-		{
-			var item = lobbyNavItems[i];
-			item.txt.alpha = (item.txt.visible && i == selectedIndex) ? 1.0 : (item.txt.visible ? 0.5 : 0.2);
-		}
-	}
-
-	function addBot()
-	{
-		if (botCount >= 2 || client.players.length + botCount >= 3) return;
-		botCount++;
-		botBtn.text = '[ ADD BOT ($botCount/2) ]';
-		updatePlayers();
-	}
-
-	function forceStart()
-	{
-		var totalPlayers = client.players.length + botCount;
-		if (totalPlayers < 2) return;
-		statusText.text = "Starting with bots...";
-		startGameNow();
+			if (navBtns[selectedIndex].hit.visible) navBtns[selectedIndex].action();
 	}
 
 	function startGameNow()
@@ -206,15 +183,8 @@ class MultiplayerLobbyState extends MusicBeatState
 	{
 		isReady = !isReady;
 		client.send("player_ready", {ready: isReady});
-		readyBtn.text = isReady ? "[ UNREADY ]" : "[  READY  ]";
+		navBtns[0].txt.text = isReady ? "[ UNREADY ]" : "[  READY  ]";
 		updatePlayers();
-	}
-
-	function leaveRoom()
-	{
-		client.send("leave_room");
-		client.disconnect();
-		FlxG.switchState(new MultiplayerState());
 	}
 
 	function updatePlayers()
@@ -246,23 +216,10 @@ class MultiplayerLobbyState extends MusicBeatState
 		for (p in players)
 			if (!p.ready) allReady = false;
 
-		if (allReady && client.hostId == client.playerId)
-		{
-			startBtn.visible = true;
-			botBtn.visible = false;
-		}
-		else
-		{
-			startBtn.visible = false;
-			if (client.hostId == client.playerId)
-				botBtn.visible = true;
-		}
+		showStartBtn(allReady && client.hostId == client.playerId);
 	}
 
-	function onPlayersUpdated()
-	{
-		updatePlayers();
-	}
+	function onPlayersUpdated() { updatePlayers(); }
 
 	function onGameStarting(countdown:Int)
 	{
