@@ -125,15 +125,17 @@ class MultiplayerLobbyState extends MusicBeatState
 		if (FlxG.keys.justPressed.UP)
 		{
 			selectedIndex--;
+			if (selectedIndex < 0) selectedIndex = 0;
 			while (selectedIndex > 0 && !btnTexts[selectedIndex].visible) selectedIndex--;
 		}
 		else if (FlxG.keys.justPressed.DOWN)
 		{
 			selectedIndex++;
+			if (selectedIndex >= btnTexts.length) selectedIndex = btnTexts.length - 1;
 			while (selectedIndex < btnTexts.length - 1 && !btnTexts[selectedIndex].visible) selectedIndex++;
 		}
 
-		if (FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE)
+		if ((FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE) && selectedIndex >= 0 && selectedIndex < btnTexts.length)
 		{
 			if (!btnTexts[selectedIndex].visible) return;
 			switch (selectedIndex)
